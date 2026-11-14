@@ -17,8 +17,9 @@ Python 3.10+ as `python3`, nothing else. Details in [Install](#install).
 
 ![context-handoff report and check on real Claude Code sessions](docs/demo.gif)
 
-*Real sessions, project names changed: 14 days, $6,738 at API list prices, and
-the biggest session over the 400K block limit.*
+*Real sessions, project names changed: about $1,070 in 14 days at API list
+prices, 24 of 34 sessions past 150K context, and one session, open for weeks,
+past the 400K block limit.*
 
 Every Claude Code turn re-sends the whole conversation. While the prompt cache
 is warm that re-read is cheap; after a pause the whole context is written to

@@ -1,5 +1,5 @@
 {
-  "description": "Meter session cost, ask for a handoff note when it gets expensive, and load the note after /clear",
+  "description": "Meter session cost, ask for a handoff note when it gets expensive, load the note after /clear, and shape auto-compaction summaries like a handoff note",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -12,9 +12,20 @@
         ]
       }
     ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/bin/context-handoff\" precompact",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
-        "matcher": "clear",
+        "matcher": "clear|compact",
         "hooks": [
           {
             "type": "command",

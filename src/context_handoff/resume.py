@@ -1,4 +1,9 @@
-"""SessionStart hook (after /clear): load the project's newest unused handoff note."""
+"""SessionStart hook: load the project's newest unused handoff note.
+
+After /clear (source "clear") the note starts the fresh session. After an
+automatic compaction (source "compact") Claude Code continues on its own, and
+the note is added next to the compaction summary as a more exact record.
+"""
 
 from __future__ import annotations
 
@@ -45,18 +50,32 @@ def run(event: dict, cfg: Config) -> dict | None:
     note = find_note(cfg, event.get("cwd") or "")
     if note is None:
         return None
+    compact = event.get("source") == "compact"
     try:
         body = note.read_text(errors="replace")[:MAX_BYTES]
-        with open(cfg.notes / ".used", "a") as f:
-            f.write(str(note) + "\n")
+        if not compact:
+            # After a compaction the note stays unused, so a later /clear still finds it.
+            with open(cfg.notes / ".used", "a") as f:
+                f.write(str(note) + "\n")
     except OSError:
         return None
+    if compact:
+        return {
+            "systemMessage": f"[context-handoff] compacted; added {note} next to the summary",
+            "hookSpecificOutput": {
+                "hookEventName": "SessionStart",
+                "additionalContext": (
+                    f"A handoff note written earlier in this session ({note}) is below. The compaction "
+                    "summary is newer: where they differ, follow the summary.\n\n" + body
+                ),
+            },
+        }
     return {
         "systemMessage": f"[context-handoff] loaded {note}; continuing (if nothing starts, type go)",
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
             # Sent as the first user message, so the fresh session continues without typing "go".
-            # Claude Code versions that ignore it after /clear still have the note in additionalContext.
+            # Claude Code 2.1.263 ignores it after /clear; the note is still in additionalContext.
             "initialUserMessage": FIRST_MESSAGE,
             "additionalContext": (
                 f"A handoff note from the previous session was loaded ({note}). On the owner's first "

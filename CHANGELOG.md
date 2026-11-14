@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Continue without typing `go`: a `PreCompact` hook makes Claude Code's compaction summary follow the
+  handoff note's sections, and the `SessionStart` hook also runs after a compaction, adding the newest
+  unused note next to the summary (the note stays unused, so a later `/clear` still loads it). With a
+  lower auto-compact window (`autoCompactWindow` or `CLAUDE_CODE_AUTO_COMPACT_WINDOW`) a long session
+  shrinks and carries on by itself. See README, "Hands-free: auto-compact".
+- Found: Claude Code 2.1.263 ignores `initialUserMessage` after `/clear`, so `go` is still needed there.
+
 ## 0.1.3 — 2026-11-14
 
 - Resume: the `SessionStart` hook also sends `initialUserMessage`, so after `/clear` the new session

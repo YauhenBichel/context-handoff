@@ -192,6 +192,35 @@ class Resume(Base):
         self.assertEqual(out["initialUserMessage"], resume.FIRST_MESSAGE)
         self.assertIn("Open items and next steps", out["initialUserMessage"])
 
+    def test_after_compaction_note_added_but_kept_for_clear(self):
+        self.note("proj-20990101-0100.md", text="# fresh\n")
+        out = resume.run({**self.ev(), "source": "compact"}, self.cfg)["hookSpecificOutput"]
+        self.assertIn("# fresh", out["additionalContext"])
+        self.assertIn("follow the summary", out["additionalContext"])
+        self.assertNotIn("initialUserMessage", out)
+        # Not marked used: a later /clear still loads it.
+        self.assertIn("# fresh", resume.run(self.ev(), self.cfg)["hookSpecificOutput"]["additionalContext"])
+
+
+class Compact(Base):
+    def test_precompact_prints_handoff_sections_as_plain_text(self):
+        sys.stdin = io.StringIO(json.dumps({"trigger": "auto", "session_id": "s1"}))
+        try:
+            buf = io.StringIO()
+            with redirect_stdout(buf):
+                self.assertEqual(main(["precompact"]), 0)
+        finally:
+            sys.stdin = sys.__stdin__
+        text = buf.getvalue()
+        self.assertFalse(text.lstrip().startswith("{"))  # stdout is used as instructions, not JSON
+        for section in ("Goal", "State", "Decisions", "Open items and next steps", "Where things are", "Gotchas"):
+            self.assertIn(section, text)
+
+    def test_hooks_json_wires_precompact_and_compact_resume(self):
+        hooks = json.loads((Path(__file__).resolve().parents[1] / "hooks/hooks.json").read_text())["hooks"]
+        self.assertIn("precompact", hooks["PreCompact"][0]["hooks"][0]["command"])
+        self.assertEqual(set(hooks["SessionStart"][0]["matcher"].split("|")), {"clear", "compact"})
+
 
 class Config(unittest.TestCase):
     def test_file_and_env(self):

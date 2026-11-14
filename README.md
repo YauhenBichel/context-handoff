@@ -70,6 +70,19 @@ line appears from the second prompt of a session.
 
 Requires Python 3.10 or newer on `PATH` as `python3`. No other dependencies.
 
+### Without Claude Code plugins
+
+The same code is on PyPI. It gives the `context-handoff` command for reports
+and checks, for example in a shell or on a machine where you don't use the
+plugin:
+
+```
+pipx install context-handoff        # or: uv tool install context-handoff
+context-handoff report 14
+```
+
+The hooks still come from the plugin above; the package does not install them.
+
 Update or remove:
 
 ```

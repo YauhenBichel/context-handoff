@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 — 2026-11-14
+
+- Also published on PyPI: `pipx install context-handoff` gives the `context-handoff` command (`report`,
+  `check`) without Claude Code plugins. The plugin itself is unchanged and still needs no pip install.
+- One version for both: `plugin.json` and the package version are checked by a test, and the release tag
+  must match.
+
 ## 0.1.0 — 2026-11-14
 
 First release.

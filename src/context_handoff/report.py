@@ -19,7 +19,8 @@ def rows(cfg: Config, days: int, root: Path | None = None):
                 continue
         except OSError:
             continue
-        s = transcript.read(f)
+        # A session file can span weeks: count only the replies inside the window.
+        s = transcript.Session([t for t in transcript.read(f).turns if t.at is None or t.at >= cutoff])
         if not s.turns:
             continue
         peak = max(t.context for t in s.turns)

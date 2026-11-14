@@ -222,6 +222,24 @@ class Cli(Base):
         self.assertIn("1 sessions", text)
         self.assertIn("-x-proj", text)
 
+    def test_report_counts_only_replies_inside_the_window(self):
+        proj = self.dir / "projects" / "-x-proj"
+        proj.mkdir(parents=True)
+        old = dict(reply("old", w1=1_000_000), timestamp="2020-01-01T00:00:00Z")
+        new = dict(reply("new", inp=1_000_000, out=0), timestamp=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+        undated = reply("undated", inp=1_000_000, out=0)
+        (proj / "abc.jsonl").write_text("\n".join(json.dumps(r) for r in (old, new, undated)) + "\n")
+        rows = list(report.rows(self.cfg, 7, self.dir / "projects"))
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["turns"], 2)
+        self.assertAlmostEqual(rows[0]["usd"], 8.00)  # two replies of 1M input at $4/M; the $8 old write is out
+
+    def test_transcript_keeps_reply_time(self):
+        p = self.transcript(dict(reply("a"), timestamp="2026-11-14T10:00:00Z"), reply("b"))
+        a, b = transcript.read(p).turns
+        self.assertEqual(a.at, 1794650400.0)
+        self.assertIsNone(b.at)
+
 
 if __name__ == "__main__":
     unittest.main()

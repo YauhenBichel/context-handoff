@@ -2,6 +2,7 @@
 
     context-handoff meter    UserPromptSubmit hook (reads hook JSON on stdin)
     context-handoff resume   SessionStart hook (reads hook JSON on stdin)
+    context-handoff precompact   PreCompact hook: prints compaction instructions
     context-handoff report [days]
     context-handoff check <transcript.jsonl>   print what the meter sees
 
@@ -13,7 +14,7 @@ from __future__ import annotations
 import json
 import sys
 
-from . import config, meter, report, resume
+from . import compact, config, meter, report, resume
 
 
 def _hook(fn) -> int:
@@ -24,7 +25,7 @@ def _hook(fn) -> int:
         print(f"context-handoff: {exc}", file=sys.stderr)
         return 0
     if out:
-        print(json.dumps(out))
+        print(out if isinstance(out, str) else json.dumps(out))
     return 0
 
 
@@ -35,6 +36,8 @@ def main(argv: list[str] | None = None) -> int:
         return _hook(meter.run)
     if cmd == "resume":
         return _hook(resume.run)
+    if cmd == "precompact":
+        return _hook(compact.run)
     if cmd == "report":
         days = int(argv[1]) if len(argv) > 1 else 7
         print(report.render(config.load(), days))

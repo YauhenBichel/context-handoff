@@ -139,9 +139,35 @@ TTL). On a Claude subscription you do not pay per token, but the same numbers
 show how fast a session uses your limits. Prices change: override them in the
 config file.
 
+## Hands-free: auto-compact
+
+A plugin cannot run `/clear`, and Claude Code (2.1.263) does not start a
+cleared session by itself, so the `/clear` flow needs you to type `go`.
+Automatic compaction is different: when it fires, the session continues by
+itself. context-handoff hooks into it:
+
+- **`PreCompact`**: the compaction summary is written with the handoff note's
+  sections (goal, state, decisions, open items and next steps, where things
+  are, gotchas).
+- **`SessionStart` after a compaction**: the newest unused handoff note, if
+  Claude wrote one, is added next to the summary. It stays unused, so a later
+  `/clear` still loads it.
+
+Claude Code compacts only near the full context window. To compact at the
+warn limit instead, set the window in `~/.claude/settings.json`:
+
+```json
+{ "autoCompactWindow": 150000 }
+```
+
+or `export CLAUDE_CODE_AUTO_COMPACT_WINDOW=150000`. A compaction summary is
+lossier than a note Claude writes on purpose, so `/clear` with a note is still
+the cheaper, sharper way when you are at the keyboard.
+
 ## Limits
 
-- A plugin cannot run `/clear` for you. That one step stays manual.
+- A plugin cannot run `/clear` for you. That one step stays manual; use
+  [auto-compact](#hands-free-auto-compact) to continue without typing.
 - Notes are matched by the project folder's name, and only those newer than
   `max_age_min` are loaded.
 - The meter reads the transcript, so the first prompt of a session is not

@@ -21,7 +21,7 @@ class Turn:
     cache_write_1h: int = 0
     cache_read: int = 0
     output: int = 0
-    at: float | None = None  # reply time (epoch seconds), when the transcript has it
+    at: float | None = None  # reply time (epoch seconds), when the session file has it
 
     @property
     def context(self) -> int:
@@ -37,6 +37,10 @@ class Turn:
             + self.output * price.output
         ) / 1e6
 
+    def cold_cost(self, price: Price) -> float:
+        """What re-sending this context costs once the cache has expired (written again, 1-hour TTL)."""
+        return self.context * price.write_1h / 1e6
+
 
 @dataclass
 class Session:
@@ -48,3 +52,7 @@ class Session:
 
     def cost(self, table=None) -> float:
         return sum(t.cost(lookup(t.model, table)) for t in self.turns)
+
+    def since(self, cutoff: float) -> Session:
+        """Only the replies at or after `cutoff`; replies without a time are kept."""
+        return Session([t for t in self.turns if t.at is None or t.at >= cutoff])

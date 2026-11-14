@@ -9,7 +9,8 @@ CLAUDE_CODE_AUTO_COMPACT_WINDOW) a long session shrinks and goes on without
 
 from __future__ import annotations
 
-from .config import Config
+from ..adapters.base import Adapter
+from ..config import Config
 
 INSTRUCTIONS = """\
 Write the summary as a handoff note that lets the session continue with no other context:
@@ -23,5 +24,6 @@ Keep exact names, paths and numbers. Leave out code dumps and logs; point to fil
 Do not include secrets, keys, tokens or personal data."""
 
 
-def run(event: dict, cfg: Config) -> str:
+def run(event: dict, cfg: Config, adapter: Adapter | None = None) -> str:
+    """Plain text: Claude Code appends a PreCompact hook's stdout to its compaction instructions."""
     return INSTRUCTIONS

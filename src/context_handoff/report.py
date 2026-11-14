@@ -1,4 +1,4 @@
-"""What Claude Code sessions cost, from local transcripts (API list prices)."""
+"""What past sessions cost, from local session files (API list prices)."""
 
 from __future__ import annotations
 
@@ -6,35 +6,34 @@ import time
 from pathlib import Path
 
 from . import adapters
+from .adapters.base import SessionReader
 from .config import Config
 from .prices import lookup
-from .usage import Session
 
 
-def rows(cfg: Config, days: int, root: Path | None = None):
-    root = root or Path.home() / ".claude" / "projects"
+def rows(cfg: Config, days: int, root: Path | None = None, adapter: SessionReader | None = None):
+    adapter = adapter or adapters.get()
     cutoff = time.time() - days * 86400
-    for f in root.glob("*/*.jsonl"):
+    for project, f in adapter.session_files(root):
         try:
             if f.stat().st_mtime < cutoff:
                 continue
         except OSError:
             continue
         # A session file can span weeks: count only the replies inside the window.
-        turns = adapters.get("claude").read(f).turns
-        s = Session([t for t in turns if t.at is None or t.at >= cutoff])
+        s = adapter.read(f).since(cutoff)
         if not s.turns:
             continue
-        peak = max(t.context for t in s.turns)
-        cold = s.last.context * lookup(s.last.model, cfg.prices).write_1h / 1e6
         yield {
-            "project": f.parent.name, "session": f.stem[:8], "turns": len(s.turns),
-            "usd": s.cost(cfg.prices), "peak_k": peak // 1000, "cold_usd": cold,
+            "project": project, "session": f.stem[:8], "turns": len(s.turns),
+            "usd": s.cost(cfg.prices), "peak_k": max(t.context for t in s.turns) // 1000,
+            "cold_usd": s.last.cold_cost(lookup(s.last.model, cfg.prices)),
         }
 
 
-def render(cfg: Config, days: int = 7, root: Path | None = None, top: int = 15) -> str:
-    data = sorted(rows(cfg, days, root), key=lambda r: r["usd"], reverse=True)
+def render(cfg: Config, days: int = 7, root: Path | None = None, top: int = 15,
+           adapter: SessionReader | None = None) -> str:
+    data = sorted(rows(cfg, days, root, adapter), key=lambda r: r["usd"], reverse=True)
     if not data:
         return f"no sessions in the last {days} days"
     total = sum(r["usd"] for r in data)

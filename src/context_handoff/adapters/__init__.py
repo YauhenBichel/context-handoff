@@ -1,22 +1,20 @@
-"""One module per agent tool: how to read its session files.
+"""One adapter per agent tool; see `base.py` for what an adapter provides.
 
-Each adapter module has:
-
-  NAME                 the tool name used with `--tool`
-  read(path) -> usage.Session
-                       the main-thread model replies of one session file, in order
+Adding a tool means adding a module here with a module-level `ADAPTER` and its
+name in `TOOLS`; nothing outside this package changes.
 """
 
 from __future__ import annotations
 
 from importlib import import_module
-from types import ModuleType
+
+from .base import Adapter
 
 TOOLS = ("claude",)
 DEFAULT = "claude"
 
 
-def get(name: str = DEFAULT) -> ModuleType:
+def get(name: str = DEFAULT) -> Adapter:
     if name not in TOOLS:
         raise ValueError(f"unknown tool {name!r}; known: {', '.join(TOOLS)}")
-    return import_module(f"{__name__}.{name}")
+    return import_module(f"{__name__}.{name}").ADAPTER

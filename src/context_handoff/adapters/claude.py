@@ -1,14 +1,13 @@
-"""Claude Code adapter: read token usage from a session transcript (JSON lines)."""
+"""Claude Code adapter: session transcripts and hook replies."""
 
 from __future__ import annotations
 
 import datetime as dt
 import json
+from collections.abc import Iterator
 from pathlib import Path
 
 from ..usage import Session, Turn
-
-NAME = "claude"
 
 
 def _turn(usage: dict, model: str) -> Turn:
@@ -68,3 +67,43 @@ def read(path: str | Path) -> Session:
             turn.at = _epoch(rec.get("timestamp"))
             replies[key] = turn
     return Session(list(replies.values()))
+
+
+def relay(line: str) -> str:
+    """Context asking Claude to repeat `line` to the owner.
+
+    A hook's `systemMessage` is shown in the terminal, but the VS Code extension
+    does not show it. So each notice is also given to Claude, which repeats it at
+    the start of its reply.
+    """
+    return (
+        "Some Claude Code clients (the VS Code extension) do not show hook messages. Start your next "
+        f"reply with this line, as is, on its own line:\n{line}"
+    )
+
+
+class ClaudeCode:
+    name = "claude"
+    agent = "Claude"
+    clear_command = "/clear"
+
+    def read(self, path: str | Path) -> Session:
+        return read(path)
+
+    def session_files(self, root: Path | None = None) -> Iterator[tuple[str, Path]]:
+        root = root or Path.home() / ".claude" / "projects"
+        for f in root.glob("*/*.jsonl"):
+            yield f.parent.name, f
+
+    def notice(self, event: str, line: str, context: str = "", **extra) -> dict:
+        ctx = relay(line) + ("\n\n" + context if context else "")
+        return {
+            "systemMessage": line,
+            "hookSpecificOutput": {"hookEventName": event, **extra, "additionalContext": ctx},
+        }
+
+    def block(self, reason: str) -> dict:
+        return {"decision": "block", "reason": reason}
+
+
+ADAPTER = ClaudeCode()

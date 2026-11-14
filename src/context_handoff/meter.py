@@ -25,7 +25,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import notice, transcript
+from . import adapters, notice
 from .config import Config
 from .prices import lookup
 
@@ -51,8 +51,8 @@ class Reading:
         )
 
 
-def measure(path: str, cfg: Config) -> Reading | None:
-    session = transcript.read(path)
+def measure(path: str, cfg: Config, tool: str = adapters.DEFAULT) -> Reading | None:
+    session = adapters.get(tool).read(path)
     last = session.last
     if last is None:
         return None
@@ -113,7 +113,7 @@ def _log(cfg: Config, event: dict) -> None:
         pass
 
 
-def run(event: dict, cfg: Config) -> dict | None:
+def run(event: dict, cfg: Config, tool: str = adapters.DEFAULT) -> dict | None:
     """Hook output as a dict, or None for no output."""
     path = event.get("transcript_path") or ""
     session = event.get("session_id") or ""
@@ -121,7 +121,7 @@ def run(event: dict, cfg: Config) -> dict | None:
     prompt = event.get("prompt") or ""
     if not path or not Path(path).is_file():
         return None
-    r = measure(path, cfg)
+    r = measure(path, cfg, tool)
     if r is None:
         return None
 

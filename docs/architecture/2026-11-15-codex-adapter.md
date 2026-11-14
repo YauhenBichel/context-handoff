@@ -105,6 +105,13 @@ src/context_handoff/
 The move of Claude code into `adapters/claude.py` is a pure refactor in its own PR,
 with the existing tests passing unchanged, before any Codex code lands.
 
+**As built (PR 1):** the flat modules (`meter`, `resume`, `notice`, `prices`, `config`,
+`report`) stay where they are and act as the core; moving them under `core/` would only
+have added a compatibility shim per module. New: `usage.py` (Turn, Session),
+`adapters/__init__.py` (`get(name)`, `TOOLS`), `adapters/claude.py` (the transcript
+reader). `transcript.py` is kept as a shim re-exporting both. Notes helpers move into
+`notes.py` only when Codex needs them.
+
 ### Usage model
 
 Make `Turn` neutral: `uncached_input`, `cache_write`, `cache_read`, `output`, plus a

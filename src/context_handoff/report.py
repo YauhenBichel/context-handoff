@@ -5,9 +5,10 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
-from . import transcript
+from . import adapters
 from .config import Config
 from .prices import lookup
+from .usage import Session
 
 
 def rows(cfg: Config, days: int, root: Path | None = None):
@@ -20,7 +21,8 @@ def rows(cfg: Config, days: int, root: Path | None = None):
         except OSError:
             continue
         # A session file can span weeks: count only the replies inside the window.
-        s = transcript.Session([t for t in transcript.read(f).turns if t.at is None or t.at >= cutoff])
+        turns = adapters.get("claude").read(f).turns
+        s = Session([t for t in turns if t.at is None or t.at >= cutoff])
         if not s.turns:
             continue
         peak = max(t.context for t in s.turns)

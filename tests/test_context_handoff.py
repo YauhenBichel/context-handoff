@@ -5,7 +5,7 @@ import sys
 import tempfile
 import time
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -289,6 +289,41 @@ class Cli(Base):
         a, b = transcript.read(p).turns
         self.assertEqual(a.at, 1794650400.0)
         self.assertIsNone(b.at)
+
+
+class Adapters(Base):
+    def test_default_tool_is_claude(self):
+        from context_handoff import adapters
+        from context_handoff.adapters import claude
+
+        self.assertIs(adapters.get(), claude)
+        self.assertEqual(claude.NAME, "claude")
+
+    def test_unknown_tool_is_an_error(self):
+        from context_handoff import adapters
+
+        with self.assertRaises(ValueError):
+            adapters.get("nope")
+
+    def test_transcript_module_is_the_claude_reader(self):
+        from context_handoff import usage
+        from context_handoff.adapters import claude
+
+        self.assertIs(transcript.read, claude.read)
+        self.assertIs(transcript.Turn, usage.Turn)
+
+    def test_check_with_tool_flag(self):
+        p = self.transcript(reply("a", w1=100_000))
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            self.assertEqual(main(["--tool", "claude", "check", str(p)]), 0)
+        self.assertIn("100K context", buf.getvalue())
+
+    def test_unknown_tool_flag_exits_2(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf), redirect_stderr(buf):
+            self.assertEqual(main(["--tool", "nope", "meter"]), 2)
+        self.assertIn("claude", buf.getvalue())
 
 
 if __name__ == "__main__":

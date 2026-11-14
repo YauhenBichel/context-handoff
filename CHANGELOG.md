@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Internal: session-file reading moved behind an adapter (`adapters/claude.py`), with the usage types
+  in `usage.py`, to prepare for Codex CLI. New option `--tool NAME` (default `claude`, the only one so
+  far). No change in behaviour; `transcript` still works as before.
+
 ## 0.1.5 — 2026-11-15
 
 - Notices are visible in the VS Code extension: it does not show a hook's `systemMessage`, so the

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.6 — 2026-11-15
 
 - Internal: session-file reading moved behind an adapter (`adapters/claude.py`), with the usage types
   in `usage.py`, to prepare for Codex CLI. New option `--tool NAME` (default `claude`, the only one so
@@ -10,7 +10,9 @@
   meter log and the once-per-session marks; `handlers/` has one module per hook (meter, resume,
   precompact), each given the tool's adapter; `adapters/base.py` defines what an adapter provides
   (reading sessions, shaping hook replies). The `transcript` and `notice` modules are gone; they were
-  never public API (the CLI and hook commands are).
+  never public API (the CLI and hook commands are). Checked before release by running 0.1.5 and
+  0.1.6 side by side on 49 real transcripts (501 hook and CLI cases): identical output apart from
+  the new `--tool` option.
 
 ## 0.1.5 — 2026-11-15
 

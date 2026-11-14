@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 — 2026-11-14
 
 - Continue without typing `go`: a `PreCompact` hook makes Claude Code's compaction summary follow the
   handoff note's sections, and the `SessionStart` hook also runs after a compaction, adding the newest

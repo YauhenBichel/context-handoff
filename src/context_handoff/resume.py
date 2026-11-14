@@ -9,6 +9,7 @@ from pathlib import Path
 from .config import Config
 
 MAX_BYTES = 12_000
+FIRST_MESSAGE = 'go: continue from the handoff note, its "Open items and next steps"'
 
 
 def find_note(cfg: Config, cwd: str, now: float | None = None) -> Path | None:
@@ -51,9 +52,12 @@ def run(event: dict, cfg: Config) -> dict | None:
     except OSError:
         return None
     return {
-        "systemMessage": f"[context-handoff] loaded {note}; type go to continue",
+        "systemMessage": f"[context-handoff] loaded {note}; continuing (if nothing starts, type go)",
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
+            # Sent as the first user message, so the fresh session continues without typing "go".
+            # Claude Code versions that ignore it after /clear still have the note in additionalContext.
+            "initialUserMessage": FIRST_MESSAGE,
             "additionalContext": (
                 f"A handoff note from the previous session was loaded ({note}). On the owner's first "
                 'message, continue from its "Open items and next steps" unless the owner asks for '

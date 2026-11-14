@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,6 +20,7 @@ class Turn:
     cache_write_1h: int = 0
     cache_read: int = 0
     output: int = 0
+    at: float | None = None  # reply time (epoch seconds), when the transcript has it
 
     @property
     def context(self) -> int:
@@ -65,6 +67,13 @@ def _turn(usage: dict, model: str) -> Turn:
     )
 
 
+def _epoch(stamp) -> float | None:
+    try:
+        return dt.datetime.fromisoformat(str(stamp).replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return None
+
+
 def read(path: str | Path) -> Session:
     """Main-thread Claude replies, one per message id, in order.
 
@@ -93,5 +102,7 @@ def read(path: str | Path) -> Session:
                 continue
             key = msg.get("id") or f"line-{len(replies)}"
             replies.pop(key, None)  # keep insertion order at the latest position
-            replies[key] = _turn(usage, model)
+            turn = _turn(usage, model)
+            turn.at = _epoch(rec.get("timestamp"))
+            replies[key] = turn
     return Session(list(replies.values()))

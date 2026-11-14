@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fix: `report N` counted every reply of any session file touched in the last N days, including
+  replies from weeks before. It now counts only replies dated inside the window, so long-lived
+  sessions no longer inflate the total.
+
+## Unreleased
+
 - README: a demo of `report` and `check` on real sessions, and a FAQ.
 - A GitHub Pages site in `docs/` with a sitemap and `llms.txt`, so search engines and LLM tools can find the project.
 

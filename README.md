@@ -217,6 +217,10 @@ Yes. Installed at user scope, the plugin's hooks run in every Claude Code
 client that reads `~/.claude`: the terminal, the VS Code extension and the
 desktop app.
 
+The VS Code extension does not show a hook's message line, so each notice
+("resumed from …", the meter's warnings) is also handed to Claude, which
+repeats it at the start of its reply. In the terminal you may see it twice.
+
 ### Does it work on a Claude subscription?
 
 Yes. You don't pay per token, but the numbers show how fast a session uses

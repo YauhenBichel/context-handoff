@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from context_handoff import config, meter, prices, report, resume, transcript  # noqa: E402
+from context_handoff import config, meter, notice, prices, report, resume, transcript  # noqa: E402
 from context_handoff.__main__ import main  # noqa: E402
 
 
@@ -105,8 +105,13 @@ class Meter(Base):
         self.assertRegex(ctx, r"handoff note to .*proj-\d{8}-\d{4}\.md")
         self.assertIn("Open items and next steps", ctx)  # format taken from commands/handoff.md
         again = meter.run(self.event(path, "next"), self.cfg)
-        self.assertNotIn("hookSpecificOutput", again)
+        self.assertNotIn("handoff note to", again["hookSpecificOutput"]["additionalContext"])
         self.assertIn("160K", again["systemMessage"])
+
+    def test_warning_is_relayed_for_clients_without_hook_messages(self):
+        out = meter.run(self.event(self.transcript(reply("a", read=160_000))), self.cfg)
+        ctx = out["hookSpecificOutput"]["additionalContext"]
+        self.assertTrue(ctx.startswith(notice.relay(out["systemMessage"])))
 
     def test_expensive_turn_triggers_even_with_small_context(self):
         # 100K tokens written to the 1-hour cache on Fable 5.2: 0.1M * $16 = $1.60
@@ -123,7 +128,8 @@ class Meter(Base):
     def test_auto_off_only_warns(self):
         self.cfg.auto_handoff = False
         out = meter.run(self.event(self.transcript(reply("a", read=160_000))), self.cfg)
-        self.assertNotIn("hookSpecificOutput", out)
+        self.assertNotIn("handoff note to", out["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("type handoff", out["systemMessage"])
 
     def test_block(self):
         path = self.transcript(reply("a", read=410_000))
@@ -191,6 +197,14 @@ class Resume(Base):
         self.assertEqual(out["hookEventName"], "SessionStart")
         self.assertEqual(out["initialUserMessage"], resume.FIRST_MESSAGE)
         self.assertIn("Open items and next steps", out["initialUserMessage"])
+
+    def test_resume_line_shown_and_relayed(self):
+        self.note("proj-20990101-0100.md", text="# fresh\n")
+        out = resume.run(self.ev(), self.cfg)
+        self.assertEqual(out["systemMessage"], "[context-handoff] resumed from proj-20990101-0100.md")
+        ctx = out["hookSpecificOutput"]["additionalContext"]
+        self.assertTrue(ctx.startswith(notice.relay(out["systemMessage"])))
+        self.assertIn("# fresh", ctx)
 
     def test_after_compaction_note_added_but_kept_for_clear(self):
         self.note("proj-20990101-0100.md", text="# fresh\n")

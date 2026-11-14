@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Notices are visible in the VS Code extension: it does not show a hook's `systemMessage`, so the
+  resume line ("resumed from <note>") and the meter's warnings are also given to Claude, which repeats
+  them at the start of its reply. The terminal still shows `systemMessage` as before.
+
 ## 0.1.4 — 2026-11-14
 
 - Continue without typing `go`: a `PreCompact` hook makes Claude Code's compaction summary follow the

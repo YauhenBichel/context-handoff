@@ -25,7 +25,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import transcript
+from . import notice, transcript
 from .config import Config
 from .prices import lookup
 
@@ -134,7 +134,7 @@ def run(event: dict, cfg: Config) -> dict | None:
     block, warn = reasons(r, cfg)
     if BYPASS.search(prompt):
         if block or warn:
-            return {"systemMessage": f"[context-handoff] {r.summary()}; prompt let through."}
+            return notice.output("UserPromptSubmit", f"[context-handoff] {r.summary()}; prompt let through.")
         return None
 
     if block:
@@ -163,15 +163,13 @@ def run(event: dict, cfg: Config) -> dict | None:
             f"nothing is in progress), write a handoff note to {target} following these "
             "instructions:\n\n" + note_instructions()
         )
-        return {
-            "systemMessage": (
-                f"[context-handoff] {r.summary()}. Claude will write a handoff note after this "
-                "task; then /clear and type go."
-            ),
-            "hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": context},
-        }
-    return {
-        "systemMessage": (
-            f"[context-handoff] {r.summary()}. Finish this task, type handoff, then /clear and go."
+        return notice.output(
+            "UserPromptSubmit",
+            f"[context-handoff] {r.summary()}. Claude will write a handoff note after this "
+            "task; then /clear and type go.",
+            context,
         )
-    }
+    return notice.output(
+        "UserPromptSubmit",
+        f"[context-handoff] {r.summary()}. Finish this task, type handoff, then /clear and go.",
+    )

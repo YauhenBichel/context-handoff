@@ -5,12 +5,15 @@ import sys
 import tempfile
 import time
 import unittest
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from context_handoff import config, meter, notice, prices, report, resume, transcript  # noqa: E402
+from context_handoff import adapters, config, meter, notes, prices, report, state, usage  # noqa: E402
+from context_handoff.adapters import claude  # noqa: E402
+from context_handoff.handlers import meter as meter_hook  # noqa: E402
+from context_handoff.handlers import resume  # noqa: E402
 from context_handoff.__main__ import main  # noqa: E402
 
 
@@ -74,92 +77,92 @@ class Transcript(Base):
         path = self.transcript(
             reply("a", read=1000), reply("a", read=1000), reply("b", read=5000), reply("c", read=9, sidechain=True)
         )
-        s = transcript.read(path)
+        s = claude.read(path)
         self.assertEqual(len(s.turns), 2)
         self.assertEqual(s.last.context, 5010)
 
     def test_cost(self):
-        t = transcript.Turn("claude-opus-5-5", input=1_000_000, cache_write_1h=1_000_000,
+        t = usage.Turn("claude-opus-5-5", input=1_000_000, cache_write_1h=1_000_000,
                             cache_read=1_000_000, output=1_000_000)
         self.assertAlmostEqual(t.cost(prices.lookup(t.model)), 4 + 8 + 0.2 + 20)
 
     def test_no_ttl_breakdown_priced_as_1h(self):
         r = reply("a")
         r["message"]["usage"] = {"input_tokens": 0, "cache_creation_input_tokens": 1000, "output_tokens": 0}
-        s = transcript.read(self.transcript(r))
+        s = claude.read(self.transcript(r))
         self.assertEqual(s.last.cache_write_1h, 1000)
 
     def test_missing_file(self):
-        self.assertEqual(transcript.read(self.dir / "nope").turns, [])
+        self.assertEqual(claude.read(self.dir / "nope").turns, [])
 
 
 class Meter(Base):
     def test_small_cheap_session_is_silent(self):
         path = self.transcript(reply("a", read=50_000))
-        self.assertIsNone(meter.run(self.event(path), self.cfg))
+        self.assertIsNone(meter_hook.run(self.event(path), self.cfg))
 
     def test_big_context_asks_for_handoff_once(self):
         path = self.transcript(reply("a", read=160_000))
-        out = meter.run(self.event(path), self.cfg)
+        out = meter_hook.run(self.event(path), self.cfg)
         ctx = out["hookSpecificOutput"]["additionalContext"]
         self.assertRegex(ctx, r"handoff note to .*proj-\d{8}-\d{4}\.md")
         self.assertIn("Open items and next steps", ctx)  # format taken from commands/handoff.md
-        again = meter.run(self.event(path, "next"), self.cfg)
+        again = meter_hook.run(self.event(path, "next"), self.cfg)
         self.assertNotIn("handoff note to", again["hookSpecificOutput"]["additionalContext"])
         self.assertIn("160K", again["systemMessage"])
 
     def test_warning_is_relayed_for_clients_without_hook_messages(self):
-        out = meter.run(self.event(self.transcript(reply("a", read=160_000))), self.cfg)
+        out = meter_hook.run(self.event(self.transcript(reply("a", read=160_000))), self.cfg)
         ctx = out["hookSpecificOutput"]["additionalContext"]
-        self.assertTrue(ctx.startswith(notice.relay(out["systemMessage"])))
+        self.assertTrue(ctx.startswith(claude.relay(out["systemMessage"])))
 
     def test_expensive_turn_triggers_even_with_small_context(self):
         # 100K tokens written to the 1-hour cache on Fable 5.2: 0.1M * $16 = $1.60
         path = self.transcript(reply("a", model="claude-fable-5-2", w1=100_000))
-        out = meter.run(self.event(path), self.cfg)
+        out = meter_hook.run(self.event(path), self.cfg)
         self.assertIn("last turn $1.6", out["hookSpecificOutput"]["additionalContext"])
 
     def test_session_total_triggers(self):
         recs = [reply(str(i), w1=50_000, out=0) for i in range(60)]  # 60 x $0.40 = $24
         self.cfg.warn_turn_usd = 0
-        out = meter.run(self.event(self.transcript(*recs)), self.cfg)
+        out = meter_hook.run(self.event(self.transcript(*recs)), self.cfg)
         self.assertIn("session $24", out["hookSpecificOutput"]["additionalContext"])
 
     def test_auto_off_only_warns(self):
         self.cfg.auto_handoff = False
-        out = meter.run(self.event(self.transcript(reply("a", read=160_000))), self.cfg)
+        out = meter_hook.run(self.event(self.transcript(reply("a", read=160_000))), self.cfg)
         self.assertNotIn("handoff note to", out["hookSpecificOutput"]["additionalContext"])
         self.assertIn("type handoff", out["systemMessage"])
 
     def test_block(self):
         path = self.transcript(reply("a", read=410_000))
-        self.assertEqual(meter.run(self.event(path), self.cfg)["decision"], "block")
+        self.assertEqual(meter_hook.run(self.event(path), self.cfg)["decision"], "block")
 
     def test_block_on_turn_cost(self):
         path = self.transcript(reply("a", model="claude-fable-5-2", w1=200_000))  # $3.20
-        self.assertEqual(meter.run(self.event(path), self.cfg)["decision"], "block")
+        self.assertEqual(meter_hook.run(self.event(path), self.cfg)["decision"], "block")
 
     def test_bypass(self):
         path = self.transcript(reply("a", read=410_000))
         for prompt in ("handoff please", "/handoff", "/context-handoff:handoff", "go on #override"):
-            out = meter.run(self.event(path, prompt), self.cfg)
+            out = meter_hook.run(self.event(path, prompt), self.cfg)
             self.assertNotIn("decision", out, prompt)
 
     def test_zero_turns_limit_off(self):
         self.cfg.block_k = 0
         path = self.transcript(reply("a", read=410_000))
-        self.assertNotIn("decision", meter.run(self.event(path), self.cfg))
+        self.assertNotIn("decision", meter_hook.run(self.event(path), self.cfg))
 
     def test_cold_turn_projection(self):
-        r = meter.measure(self.transcript(reply("a", read=400_000, inp=0)), self.cfg)
+        r = meter.measure(claude.read(self.transcript(reply("a", read=400_000, inp=0))), self.cfg.prices)
         self.assertAlmostEqual(r.cold_turn_usd, 3.20)
 
     def test_log_written(self):
-        meter.run(self.event(self.transcript(reply("a", read=1000))), self.cfg)
+        meter_hook.run(self.event(self.transcript(reply("a", read=1000))), self.cfg)
         self.assertTrue((self.cfg.state / "meter.jsonl").read_text().strip())
 
     def test_missing_transcript(self):
-        self.assertIsNone(meter.run({"transcript_path": "/nonexistent"}, self.cfg))
+        self.assertIsNone(meter_hook.run({"transcript_path": "/nonexistent"}, self.cfg))
 
 
 class Resume(Base):
@@ -203,7 +206,7 @@ class Resume(Base):
         out = resume.run(self.ev(), self.cfg)
         self.assertEqual(out["systemMessage"], "[context-handoff] resumed from proj-20990101-0100.md")
         ctx = out["hookSpecificOutput"]["additionalContext"]
-        self.assertTrue(ctx.startswith(notice.relay(out["systemMessage"])))
+        self.assertTrue(ctx.startswith(claude.relay(out["systemMessage"])))
         self.assertIn("# fresh", ctx)
 
     def test_after_compaction_note_added_but_kept_for_clear(self):
@@ -286,9 +289,68 @@ class Cli(Base):
 
     def test_transcript_keeps_reply_time(self):
         p = self.transcript(dict(reply("a"), timestamp="2026-11-14T10:00:00Z"), reply("b"))
-        a, b = transcript.read(p).turns
+        a, b = claude.read(p).turns
         self.assertEqual(a.at, 1794650400.0)
         self.assertIsNone(b.at)
+
+
+class Adapters(Base):
+    def test_default_tool_is_claude(self):
+        self.assertIs(adapters.get(), claude.ADAPTER)
+        self.assertEqual(adapters.get().name, "claude")
+
+    def test_unknown_tool_is_an_error(self):
+        with self.assertRaises(ValueError):
+            adapters.get("nope")
+
+    def test_handlers_use_the_injected_adapter(self):
+        class Other(claude.ClaudeCode):
+            agent, clear_command = "Agent", "/new"
+
+            def block(self, reason):
+                return {"blocked": reason}
+
+        path = self.transcript(reply("a", read=410_000))
+        out = meter_hook.run(self.event(path), self.cfg, Other())
+        self.assertIn("(Agent saves a note), then /new", out["blocked"])
+
+    def test_check_with_tool_flag(self):
+        p = self.transcript(reply("a", w1=100_000))
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            self.assertEqual(main(["--tool", "claude", "check", str(p)]), 0)
+        self.assertIn("100K context", buf.getvalue())
+
+    def test_unknown_tool_flag_exits_2(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf), redirect_stderr(buf):
+            self.assertEqual(main(["--tool", "nope", "meter"]), 2)
+        self.assertIn("claude", buf.getvalue())
+
+
+class Parts(Base):
+    def test_session_since_keeps_undated_replies(self):
+        s = usage.Session([usage.Turn("m", at=10.0), usage.Turn("m", at=20.0), usage.Turn("m")])
+        self.assertEqual(len(s.since(15.0).turns), 2)
+
+    def test_cold_cost_is_context_at_the_1h_write_price(self):
+        t = usage.Turn("claude-opus-5-5", cache_read=1_000_000)
+        self.assertAlmostEqual(t.cold_cost(prices.lookup(t.model)), 8.0)
+
+    def test_state_first_time_once_per_session(self):
+        st = state.State(self.cfg.state)
+        self.assertTrue(st.first_time("s1"))
+        self.assertFalse(st.first_time("s1"))
+        self.assertTrue(st.first_time("s2"))
+
+    def test_note_store_marks_used(self):
+        store = notes.NoteStore(self.cfg.notes)
+        note = self.cfg.notes / "proj-20990101-0100.md"
+        note.write_text("# n\n")
+        cwd = str(self.dir / "proj")
+        self.assertEqual(store.newest_unused(cwd), note)
+        store.mark_used(note)
+        self.assertIsNone(store.newest_unused(cwd))
 
 
 if __name__ == "__main__":

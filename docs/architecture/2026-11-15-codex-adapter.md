@@ -105,6 +105,28 @@ src/context_handoff/
 The move of Claude code into `adapters/claude.py` is a pure refactor in its own PR,
 with the existing tests passing unchanged, before any Codex code lands.
 
+**As built (PR 1):** the flat modules (`meter`, `resume`, `notice`, `prices`, `config`,
+`report`) stay where they are and act as the core; moving them under `core/` would only
+have added a compatibility shim per module. New: `usage.py` (Turn, Session),
+`adapters/__init__.py` (`get(name)`, `TOOLS`), `adapters/claude.py` (the transcript
+reader).
+
+**As built (PR 1, second commit: split by responsibility):**
+
+- Domain modules, no tool knowledge: `usage` (Turn, Session, `since`, `cold_cost`),
+  `meter` (pure: `measure`, `reasons`, `bypassed`), `notes` (`NoteStore`, `instructions`),
+  `state` (meter log, once-per-session marks), `prices`, `config`, `report`.
+- `adapters/base.py`: Protocols `SessionReader` (`name`, `read`, `session_files`) and
+  `HookReplies` (`agent`, `clear_command`, `notice`, `block`); `Adapter` is both. Each tool
+  module exposes `ADAPTER`; `adapters.get(name)` returns it. `report` needs only a
+  `SessionReader`.
+- `handlers/`: one module per hook (`meter`, `resume`, `compact`), each `run(event, cfg,
+  adapter)`. They build their texts from `adapter.agent` and `adapter.clear_command`, so the
+  Claude output is byte-identical and Codex adds only an adapter module.
+- `__main__` is a command table that resolves `--tool` and injects the adapter.
+- `transcript.py` and `notice.py` are removed: the CLI and hook commands are the interface,
+  not the Python modules.
+
 ### Usage model
 
 Make `Turn` neutral: `uncached_input`, `cache_write`, `cache_read`, `output`, plus a

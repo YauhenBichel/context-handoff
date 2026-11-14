@@ -1,52 +1,13 @@
-"""Read token usage from a Claude Code session transcript (JSON lines)."""
+"""Claude Code adapter: session transcripts and hook replies."""
 
 from __future__ import annotations
 
 import datetime as dt
 import json
-from dataclasses import dataclass, field
+from collections.abc import Iterator
 from pathlib import Path
 
-from .prices import Price, lookup
-
-
-@dataclass
-class Turn:
-    """Usage of one model reply."""
-
-    model: str
-    input: int = 0
-    cache_write_5m: int = 0
-    cache_write_1h: int = 0
-    cache_read: int = 0
-    output: int = 0
-    at: float | None = None  # reply time (epoch seconds), when the transcript has it
-
-    @property
-    def context(self) -> int:
-        """Tokens the model read for this reply: what the next turn re-sends."""
-        return self.input + self.cache_write_5m + self.cache_write_1h + self.cache_read
-
-    def cost(self, price: Price) -> float:
-        return (
-            self.input * price.input
-            + self.cache_write_5m * price.write_5m
-            + self.cache_write_1h * price.write_1h
-            + self.cache_read * price.cache_read
-            + self.output * price.output
-        ) / 1e6
-
-
-@dataclass
-class Session:
-    turns: list[Turn] = field(default_factory=list)
-
-    @property
-    def last(self) -> Turn | None:
-        return self.turns[-1] if self.turns else None
-
-    def cost(self, table=None) -> float:
-        return sum(t.cost(lookup(t.model, table)) for t in self.turns)
+from ..usage import Session, Turn
 
 
 def _turn(usage: dict, model: str) -> Turn:
@@ -106,3 +67,43 @@ def read(path: str | Path) -> Session:
             turn.at = _epoch(rec.get("timestamp"))
             replies[key] = turn
     return Session(list(replies.values()))
+
+
+def relay(line: str) -> str:
+    """Context asking Claude to repeat `line` to the owner.
+
+    A hook's `systemMessage` is shown in the terminal, but the VS Code extension
+    does not show it. So each notice is also given to Claude, which repeats it at
+    the start of its reply.
+    """
+    return (
+        "Some Claude Code clients (the VS Code extension) do not show hook messages. Start your next "
+        f"reply with this line, as is, on its own line:\n{line}"
+    )
+
+
+class ClaudeCode:
+    name = "claude"
+    agent = "Claude"
+    clear_command = "/clear"
+
+    def read(self, path: str | Path) -> Session:
+        return read(path)
+
+    def session_files(self, root: Path | None = None) -> Iterator[tuple[str, Path]]:
+        root = root or Path.home() / ".claude" / "projects"
+        for f in root.glob("*/*.jsonl"):
+            yield f.parent.name, f
+
+    def notice(self, event: str, line: str, context: str = "", **extra) -> dict:
+        ctx = relay(line) + ("\n\n" + context if context else "")
+        return {
+            "systemMessage": line,
+            "hookSpecificOutput": {"hookEventName": event, **extra, "additionalContext": ctx},
+        }
+
+    def block(self, reason: str) -> dict:
+        return {"decision": "block", "reason": reason}
+
+
+ADAPTER = ClaudeCode()

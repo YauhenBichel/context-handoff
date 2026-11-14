@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Internal: session-file reading moved behind an adapter (`adapters/claude.py`), with the usage types
+  in `usage.py`, to prepare for Codex CLI. New option `--tool NAME` (default `claude`, the only one so
+  far).
+- Internal: code split by responsibility, with no change in behaviour, hook output or CLI output.
+  `meter.py` only measures; `notes.py` finds, names and marks handoff notes; `state.py` keeps the
+  meter log and the once-per-session marks; `handlers/` has one module per hook (meter, resume,
+  precompact), each given the tool's adapter; `adapters/base.py` defines what an adapter provides
+  (reading sessions, shaping hook replies). The `transcript` and `notice` modules are gone; they were
+  never public API (the CLI and hook commands are).
+
 ## 0.1.5 — 2026-11-15
 
 - Notices are visible in the VS Code extension: it does not show a hook's `systemMessage`, so the

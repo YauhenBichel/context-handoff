@@ -6,6 +6,9 @@
     context-handoff report [days]
     context-handoff check <transcript.jsonl>   print what the meter sees
 
+Options (before the command):
+    --tool NAME   the agent tool whose session files are read (default: claude)
+
 Hooks never fail the session: any error ends with no output and exit 0.
 """
 
@@ -14,13 +17,23 @@ from __future__ import annotations
 import json
 import sys
 
-from . import compact, config, meter, report, resume
+from . import adapters, config, meter, report
+from .adapters.base import Adapter
+from .handlers import compact as compact_handler
+from .handlers import meter as meter_handler
+from .handlers import resume as resume_handler
+
+HOOKS = {
+    "meter": meter_handler.run,
+    "resume": resume_handler.run,
+    "precompact": compact_handler.run,
+}
 
 
-def _hook(fn) -> int:
+def _hook(handler, adapter: Adapter) -> int:
     try:
         event = json.load(sys.stdin)
-        out = fn(event, config.load())
+        out = handler(event, config.load(), adapter)
     except Exception as exc:  # a hook must never break the session
         print(f"context-handoff: {exc}", file=sys.stderr)
         return 0
@@ -29,32 +42,47 @@ def _hook(fn) -> int:
     return 0
 
 
-def main(argv: list[str] | None = None) -> int:
-    argv = sys.argv[1:] if argv is None else argv
-    cmd = argv[0] if argv else ""
-    if cmd == "meter":
-        return _hook(meter.run)
-    if cmd == "resume":
-        return _hook(resume.run)
-    if cmd == "precompact":
-        return _hook(compact.run)
-    if cmd == "report":
-        days = int(argv[1]) if len(argv) > 1 else 7
-        print(report.render(config.load(), days))
-        return 0
-    if cmd == "check" and len(argv) > 1:
-        cfg = config.load()
-        r = meter.measure(argv[1], cfg)
-        if r is None:
-            print("no Claude replies in that transcript")
-            return 1
-        block, warn = meter.reasons(r, cfg)
-        print(r.summary())
-        print("block:", "; ".join(block) or "no")
-        print("warn: ", "; ".join(warn) or "no")
-        return 0
+def _report(args: list[str], adapter: Adapter) -> int:
+    days = int(args[0]) if args else 7
+    print(report.render(config.load(), days, adapter=adapter))
+    return 0
+
+
+def _check(args: list[str], adapter: Adapter) -> int:
+    cfg = config.load()
+    r = meter.measure(adapter.read(args[0]), cfg.prices)
+    if r is None:
+        print(f"no {adapter.agent} replies in that transcript")
+        return 1
+    block, warn = meter.reasons(r, cfg)
+    print(r.summary())
+    print("block:", "; ".join(block) or "no")
+    print("warn: ", "; ".join(warn) or "no")
+    return 0
+
+
+def _usage() -> int:
     print(__doc__.strip())
     return 2
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    tool = adapters.DEFAULT
+    if argv[:1] == ["--tool"]:
+        if len(argv) < 2 or argv[1] not in adapters.TOOLS:
+            print(f"context-handoff: --tool takes one of: {', '.join(adapters.TOOLS)}", file=sys.stderr)
+            return 2
+        tool, argv = argv[1], argv[2:]
+    adapter = adapters.get(tool)
+    cmd, args = (argv[0], argv[1:]) if argv else ("", [])
+    if cmd in HOOKS:
+        return _hook(HOOKS[cmd], adapter)
+    if cmd == "report":
+        return _report(args, adapter)
+    if cmd == "check" and args:
+        return _check(args, adapter)
+    return _usage()
 
 
 if __name__ == "__main__":

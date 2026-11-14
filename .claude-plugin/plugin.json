@@ -1,6 +1,6 @@
 {
   "name": "context-handoff",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Keep Claude Code sessions small: meter context, write a handoff note automatically when it grows, and resume from it after /clear.",
   "author": {
     "name": "Yauhen Bichel"

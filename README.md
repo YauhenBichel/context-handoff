@@ -1,6 +1,19 @@
 # context-handoff
 
-A Claude Code plugin that keeps long sessions from getting expensive.
+[![ci](https://github.com/YauhenBichel/context-handoff/actions/workflows/ci.yml/badge.svg)](https://github.com/YauhenBichel/context-handoff/actions/workflows/ci.yml)
+[![release](https://img.shields.io/github/v/release/YauhenBichel/context-handoff)](https://github.com/YauhenBichel/context-handoff/releases)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+A Claude Code plugin that keeps long sessions from getting expensive: it shows
+what each turn costs, writes a handoff note when the session grows, and resumes
+from it after `/clear`.
+
+```
+/plugin marketplace add YauhenBichel/context-handoff
+/plugin install context-handoff@context-handoff
+```
+
+Python 3.10+ as `python3`, nothing else. Details in [Install](#install).
 
 Every Claude Code turn re-sends the whole conversation. While the prompt cache
 is warm that re-read is cheap; after a pause the whole context is written to
@@ -12,6 +25,13 @@ context-handoff watches what each turn costs. When a session gets too big or
 too expensive, Claude writes a short handoff note at the end of the current
 task. You run `/clear`, type `go`, and a fresh, small session continues from
 the note.
+
+What you see above a prompt once a session is past the warn limit:
+
+```
+[context-handoff] 182K context, last turn $0.61, session $14.20, a cold turn would cost $1.46
+(claude-opus-5-5 prices). Claude will write a handoff note after this task; then /clear and type go.
+```
 
 ## How it works
 
@@ -38,7 +58,25 @@ In Claude Code:
 /plugin install context-handoff@context-handoff
 ```
 
+Or from a terminal:
+
+```
+claude plugin marketplace add YauhenBichel/context-handoff
+claude plugin install context-handoff@context-handoff
+```
+
+Restart Claude Code (or start a new session) to load the hooks. The meter
+line appears from the second prompt of a session.
+
 Requires Python 3.10 or newer on `PATH` as `python3`. No other dependencies.
+
+Update or remove:
+
+```
+claude plugin marketplace update context-handoff
+claude plugin update context-handoff@context-handoff
+claude plugin uninstall context-handoff@context-handoff
+```
 
 ## Use
 

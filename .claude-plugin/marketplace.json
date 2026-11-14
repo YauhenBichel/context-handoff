@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "context-handoff",
+  "description": "Keep Claude Code sessions small with automatic handoff notes",
+  "owner": {
+    "name": "Yauhen Bichel"
+  },
+  "plugins": [
+    {
+      "name": "context-handoff",
+      "description": "Meter context, write a handoff note automatically when it grows, and resume from it after /clear.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

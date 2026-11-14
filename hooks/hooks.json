@@ -1,0 +1,28 @@
+{
+  "description": "Meter session cost, ask for a handoff note when it gets expensive, and load the note after /clear",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/bin/context-handoff\" meter",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/bin/context-handoff\" resume",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "context-handoff",
+  "version": "0.1.0",
+  "description": "Keep Claude Code sessions small: meter context, write a handoff note automatically when it grows, and resume from it after /clear.",
+  "author": {
+    "name": "Yauhen Bichel"
+  },
+  "homepage": "https://github.com/YauhenBichel/context-handoff",
+  "repository": "https://github.com/YauhenBichel/context-handoff",
+  "license": "MIT",
+  "keywords": ["context", "tokens", "cost", "handoff", "hooks"]
+}

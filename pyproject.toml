@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "context-handoff"
+version = "0.1.0"
+description = "Keep Claude Code sessions cheap: meter cost, write a handoff note, resume after /clear"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Yauhen Bichel" }]
+dependencies = []
+
+[project.scripts]
+context-handoff = "context_handoff.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/YauhenBichel/context-handoff"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"

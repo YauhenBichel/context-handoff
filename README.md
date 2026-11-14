@@ -38,7 +38,7 @@ In Claude Code:
 /plugin install context-handoff@context-handoff
 ```
 
-Requires Python 3.9 or newer on `PATH` as `python3`. No other dependencies.
+Requires Python 3.10 or newer on `PATH` as `python3`. No other dependencies.
 
 ## Use
 

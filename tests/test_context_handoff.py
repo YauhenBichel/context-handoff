@@ -107,6 +107,8 @@ class Meter(Base):
         ctx = out["hookSpecificOutput"]["additionalContext"]
         self.assertRegex(ctx, r"handoff note to .*proj-\d{8}-\d{4}\.md")
         self.assertIn("Open items and next steps", ctx)  # format taken from commands/handoff.md
+        self.assertTrue(out["systemMessage"].endswith(
+            "Claude will write a handoff note after this task; then /clear and type go."))
         again = meter_hook.run(self.event(path, "next"), self.cfg)
         self.assertNotIn("handoff note to", again["hookSpecificOutput"]["additionalContext"])
         self.assertIn("160K", again["systemMessage"])
@@ -132,7 +134,8 @@ class Meter(Base):
         self.cfg.auto_handoff = False
         out = meter_hook.run(self.event(self.transcript(reply("a", read=160_000))), self.cfg)
         self.assertNotIn("handoff note to", out["hookSpecificOutput"]["additionalContext"])
-        self.assertIn("type handoff", out["systemMessage"])
+        self.assertTrue(out["systemMessage"].endswith(
+            "Finish this task, type handoff, then /clear and go."))
 
     def test_block(self):
         path = self.transcript(reply("a", read=410_000))

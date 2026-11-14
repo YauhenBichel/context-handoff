@@ -76,6 +76,6 @@ def _ask_for_note(adapter: Adapter, cfg: Config, cwd: str, r: Reading, warn: lis
     return adapter.notice(
         EVENT,
         f"[context-handoff] {r.summary()}. {adapter.agent} will write a handoff note after this "
-        f"task; then {adapter.clear_command} and go.",
+        f"task; then {adapter.clear_command} and type go.",
         context,
     )

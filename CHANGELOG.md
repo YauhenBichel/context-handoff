@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Resume: the `SessionStart` hook also sends `initialUserMessage`, so after `/clear` the new session
+  continues from the note without typing `go`. If a Claude Code version ignores it after `/clear`, typing
+  `go` still works as before.
+
 ## 0.1.2 — 2026-11-14
 
 - Fix: `report N` counted every reply of any session file touched in the last N days, including

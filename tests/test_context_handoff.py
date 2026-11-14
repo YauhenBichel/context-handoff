@@ -185,6 +185,13 @@ class Resume(Base):
         self.assertIn("# older", out["hookSpecificOutput"]["additionalContext"])
         self.assertIsNone(resume.run(self.ev(), self.cfg))
 
+    def test_starts_on_its_own(self):
+        self.note("proj-20990101-0100.md")
+        out = resume.run(self.ev(), self.cfg)["hookSpecificOutput"]
+        self.assertEqual(out["hookEventName"], "SessionStart")
+        self.assertEqual(out["initialUserMessage"], resume.FIRST_MESSAGE)
+        self.assertIn("Open items and next steps", out["initialUserMessage"])
+
 
 class Config(unittest.TestCase):
     def test_file_and_env(self):

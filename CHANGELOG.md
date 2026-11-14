@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.5 — 2026-11-15
 
 - Notices are visible in the VS Code extension: it does not show a hook's `systemMessage`, so the
   resume line ("resumed from <note>") and the meter's warnings are also given to Claude, which repeats

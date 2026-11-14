@@ -1,0 +1,18 @@
+# context-handoff
+
+> A Claude Code plugin that shows what each turn costs, writes a handoff note when a session grows too big or too expensive, and resumes from that note after /clear. Python 3.10+ standard library only, MIT licence, runs locally.
+
+Every Claude Code turn re-sends the whole conversation. After the one-hour prompt cache expires, the next turn re-writes the whole context at 2x the input price (about $3.20 for a 400K-token session on Claude Opus 5.5). context-handoff keeps sessions small: past 150K tokens, $0.50 a turn or $20 a session, Claude writes a handoff note at the end of the current task; after /clear, a SessionStart hook loads it and the user types "go".
+
+Install in Claude Code:
+
+    /plugin marketplace add YauhenBichel/context-handoff
+    /plugin install context-handoff@context-handoff
+
+Cost report without the plugin: `pipx install context-handoff`, then `context-handoff report 14`.
+
+## Docs
+
+- [README](https://github.com/YauhenBichel/context-handoff/blob/main/README.md): install, how it works, settings, FAQ
+- [Changelog](https://github.com/YauhenBichel/context-handoff/blob/main/CHANGELOG.md)
+- [PyPI package](https://pypi.org/project/context-handoff/)

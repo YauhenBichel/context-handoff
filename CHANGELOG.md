@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- README: a demo of `report` and `check` on real sessions, and a FAQ.
+- A GitHub Pages site in `docs/` with a sitemap and `llms.txt`, so search engines and LLM tools can find the project.
+
 ## 0.1.1 — 2026-11-14
 
 - Also published on PyPI: `pipx install context-handoff` gives the `context-handoff` command (`report`,

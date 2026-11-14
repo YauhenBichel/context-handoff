@@ -15,6 +15,11 @@ from it after `/clear`.
 
 Python 3.10+ as `python3`, nothing else. Details in [Install](#install).
 
+![context-handoff report and check on real Claude Code sessions](docs/demo.gif)
+
+*Real sessions, project names changed: 14 days, $6,738 at API list prices, and
+the biggest session over the 400K block limit.*
+
 Every Claude Code turn re-sends the whole conversation. While the prompt cache
 is warm that re-read is cheap; after a pause the whole context is written to
 the cache again at up to 2× the input price. A 400K-token session on Claude
@@ -147,6 +152,52 @@ config file.
 Everything runs locally. The plugin reads your transcripts in `~/.claude` and
 writes notes and a log there. Nothing is sent anywhere. Do not put secrets in
 handoff notes.
+
+## FAQ
+
+### How do I reduce Claude Code costs?
+
+Keep sessions small. Most of the cost of a long session is re-reading its own
+context: every turn re-sends the whole conversation. Finish a task, write a
+handoff note, run `/clear`, and continue in a fresh session. context-handoff
+tells you when to do it and writes the note for you. Run
+`context-handoff report 14` to see where your own cost goes.
+
+### Why does Claude Code get expensive after a pause?
+
+The prompt cache expires. Claude Code caches the conversation for one hour;
+after a longer pause the next turn writes the whole context into the cache
+again at 2× the input price. On a 400K-token session that is about $3.20 for
+one turn on Claude Opus 5.5. The meter shows this "cold turn" cost before each
+prompt.
+
+### How do I continue a Claude Code session after `/clear`?
+
+Ask Claude for a handoff note before `/clear` (`/context-handoff:handoff`, or
+let the plugin ask automatically). After `/clear`, the `SessionStart` hook
+loads the project's newest unused note, so you type `go` and the new session
+continues from it.
+
+### How big should a Claude Code session get?
+
+The defaults warn at 150K tokens of context, $0.50 for one turn or $20 for a
+session, and block at 400K or $3 for one turn. Change them in
+`~/.claude/context-handoff.json`; see [Settings](#settings).
+
+### Does it work in VS Code and the desktop app?
+
+Yes. Installed at user scope, the plugin's hooks run in every Claude Code
+client that reads `~/.claude`: the terminal, the VS Code extension and the
+desktop app.
+
+### Does it work on a Claude subscription?
+
+Yes. You don't pay per token, but the numbers show how fast a session uses
+your plan's limits, and smaller sessions stretch them.
+
+### Does it send my code or transcripts anywhere?
+
+No. It reads local transcripts and writes local notes. See [Privacy](#privacy).
 
 ## Development
 

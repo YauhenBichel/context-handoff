@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>context-handoff: keep Claude Code sessions small and cheap</title>
+<meta name="description" content="A Claude Code plugin that shows what each turn costs, writes a handoff note when a session grows too big, and resumes from it after /clear. Python standard library only, MIT.">
+<link rel="canonical" href="https://yauhenbichel.github.io/context-handoff/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="context-handoff: keep Claude Code sessions small and cheap">
+<meta property="og:description" content="See what each Claude Code turn costs. Past a size or cost limit, Claude writes a handoff note; after /clear, a fresh session continues from it.">
+<meta property="og:url" content="https://yauhenbichel.github.io/context-handoff/">
+<meta property="og:image" content="https://yauhenbichel.github.io/context-handoff/demo.gif">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "context-handoff",
+  "description": "A Claude Code plugin that shows what each turn costs, writes a handoff note when a session grows too big, and resumes from it after /clear.",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS, Linux",
+  "license": "https://opensource.org/licenses/MIT",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "codeRepository": "https://github.com/YauhenBichel/context-handoff",
+  "downloadUrl": "https://pypi.org/project/context-handoff/",
+  "author": { "@type": "Person", "name": "Yauhen Bichel", "url": "https://github.com/YauhenBichel" }
+}
+</script>
+<style>
+  :root { --bg: #ffffff; --fg: #1a1a1a; --muted: #555; --code: #f3f3f1; --accent: #c2410c; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #161616; --fg: #ececec; --muted: #a8a8a8; --code: #262626; --accent: #fb923c; } }
+  body { background: var(--bg); color: var(--fg); font: 17px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 2rem; line-height: 1.2; margin-bottom: .3em; }
+  h2 { margin-top: 2em; }
+  p.lead { color: var(--muted); font-size: 1.1rem; }
+  pre { background: var(--code); padding: 12px 14px; overflow-x: auto; border-radius: 6px; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: .92em; }
+  img { max-width: 100%; height: auto; border-radius: 6px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+<h1>context-handoff</h1>
+<p class="lead">A Claude Code plugin that keeps long sessions from getting expensive: it shows what each turn costs, writes a handoff note when the session grows, and resumes from it after <code>/clear</code>.</p>
+
+<pre><code>/plugin marketplace add YauhenBichel/context-handoff
+/plugin install context-handoff@context-handoff</code></pre>
+
+<img src="demo.gif" alt="context-handoff report and check on real Claude Code sessions" width="1000" height="460">
+
+<h2>Why Claude Code sessions get expensive</h2>
+<p>Every Claude Code turn re-sends the whole conversation. While the prompt cache is warm that re-read is cheap; after a pause of more than an hour the whole context is written to the cache again at 2× the input price. A 400K-token session on Claude Opus 5.5 pays about $3.20 for one such cold turn, before Claude writes a word. Long sessions also get slower and lose focus.</p>
+
+<h2>What it does</h2>
+<ul>
+  <li><strong>Meter</strong>: before each prompt, the context size, the last turn's cost, the session's cost and what a cold turn would cost.</li>
+  <li><strong>Handoff</strong>: past a warn limit (150K context, $0.50 a turn or $20 a session), Claude writes a short handoff note when the current task is done. Past a block limit (400K or $3 a turn), the prompt is held until you type <code>handoff</code> or add <code>#override</code>.</li>
+  <li><strong>Resume</strong>: after <code>/clear</code>, the newest unused note for the project is loaded, so you type <code>go</code> and a fresh session continues.</li>
+</ul>
+
+<h2>See your own costs first</h2>
+<pre><code>pipx install context-handoff
+context-handoff report 14</code></pre>
+
+<h2>FAQ</h2>
+<h3>How do I reduce Claude Code costs?</h3>
+<p>Keep sessions small. Most of the cost of a long session is re-reading its own context. Finish a task, write a handoff note, run <code>/clear</code>, and continue in a fresh session.</p>
+<h3>How do I continue a Claude Code session after /clear?</h3>
+<p>Write a handoff note before <code>/clear</code>. With this plugin, the note is loaded into the new session automatically; type <code>go</code>.</p>
+<h3>Does it work in VS Code and the desktop app?</h3>
+<p>Yes. Installed at user scope, its hooks run in the terminal, the VS Code extension and the desktop app.</p>
+<h3>Does it send my data anywhere?</h3>
+<p>No. Everything runs locally, using the Python standard library only.</p>
+
+<p><a href="https://github.com/YauhenBichel/context-handoff">Source on GitHub</a> · <a href="https://pypi.org/project/context-handoff/">PyPI</a> · MIT licence</p>
+</main>
+</body>
+</html>

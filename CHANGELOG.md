@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 — 2026-11-14
 
 - Fix: `report N` counted every reply of any session file touched in the last N days, including
   replies from weeks before. It now counts only replies dated inside the window, so long-lived

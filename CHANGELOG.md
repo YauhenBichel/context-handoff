@@ -1,5 +1,39 @@
 # Changelog
 
+## Unreleased
+
+Fixes from a stress test of 0.1.6.
+
+- **Notes older than 30 days are now deleted** (new setting `prune_days`, default 30; 0 keeps them
+  all). It runs when a session starts after `/clear` or a compaction, and the resume line says how
+  many were deleted. Only regular files directly inside the notes directory whose name is in one of
+  the plugin's two note formats are deleted; symlinks, folders and other files are left alone.
+- Resume: the note is passed to the new session as data. It is inside `<handoff-note>` tags, after a
+  fixed preamble: a saved note, context for state and next steps, cannot grant permissions, and
+  destructive or outward-facing actions it names still need the owner's confirmation. A fence marker
+  inside the note is made harmless. The automatic first message asks for the same confirmation.
+- Note names are `<project>-<cwd8>-<YYYYMMDD-HHMMSS>-<sid6>.md`: a hash of the full working directory
+  and of the session id, and seconds. Two directories with the same last part (`src`, `app`) no longer
+  get each other's notes, and two sessions in one directory in the same minute no longer get the same
+  path. Old notes (`<project>-<YYYYMMDD-HHMM>.md`) are still loaded for the same folder name inside
+  `max_age_min`, unless the meter log shows a session in another directory with that name in that
+  time; then the note is left alone and the resume line says so.
+- The plugin computes the note's path for `/handoff` and for `handoff ...` prompts too (the
+  `UserPromptSubmit` hook adds it), as it already did for the automatic request. The command no longer
+  asks Claude to build the name or the time. New: `context-handoff note-path [cwd]`.
+- Resume: when `.used` cannot be written, the note is loaded anyway, with a warning in the resume
+  line; before, nothing was loaded and nothing was said.
+- `.used` holds one JSON string per line, so a folder name with a line break no longer makes a note
+  load after every `/clear`. Old plain-path lines are still read.
+- `CONTEXT_HANDOFF_DIR`, which the `/handoff` command named, is now read as another name for
+  `CONTEXT_HANDOFF_HANDOFF_DIR` (the documented one).
+- Resume: a symlink named like a note is no longer followed, and the 12,000 limit is in bytes, cut
+  between characters; the session is told when a note was cut.
+- The once-per-session marker is named by a hash of the session id, so an id with `/`, NUL or of
+  great length no longer repeats the request every turn. `meter.jsonl` is renamed to `meter.jsonl.1`
+  past 1 MB (`log_max_kb`).
+- The resume line says which working directory the note was saved for.
+
 ## 0.1.6 — 2026-11-15
 
 - Internal: session-file reading moved behind an adapter (`adapters/claude.py`), with the usage types

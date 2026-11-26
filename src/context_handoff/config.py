@@ -5,13 +5,17 @@ Config file example (all keys optional):
     {
       "warn_k": 150, "block_k": 400,
       "warn_turn_usd": 0.50, "block_turn_usd": 3.00,
-      "warn_session_usd": 20, "auto_handoff": true,
+      "warn_session_usd": 20, "auto_handoff": true, "prune_days": 30,
       "prices": {"claude-opus-5-5": [4.0, 20.0, 0.20]}
     }
 
 Environment variables use the same names, upper case, with a
 CONTEXT_HANDOFF_ prefix: CONTEXT_HANDOFF_WARN_TURN_USD=1.0 and so on.
 A limit set to 0 is turned off.
+
+The notes directory is `handoff_dir`, so its variable is
+CONTEXT_HANDOFF_HANDOFF_DIR. The shorter CONTEXT_HANDOFF_DIR, which the
+/handoff command named up to 0.1.6, is read too when the first is not set.
 """
 
 from __future__ import annotations
@@ -37,6 +41,8 @@ class Config:
     warn_session_usd: float = 20.0  # whole-session cost that triggers a handoff
     auto_handoff: bool = True  # ask Claude to write the note itself
     max_age_min: int = 180  # notes older than this are not resumed
+    prune_days: int = 30  # notes older than this are deleted; 0 keeps them all
+    log_max_kb: int = 1024  # meter.jsonl is rotated past this size; 0 never rotates
     handoff_dir: str = ""
     state_dir: str = ""
     prices: dict = field(default_factory=lambda: dict(DEFAULT_PRICES))
@@ -75,6 +81,8 @@ def load(path: str | Path | None = None) -> Config:
         if f.name == "prices":
             continue
         env = os.environ.get("CONTEXT_HANDOFF_" + f.name.upper())
+        if f.name == "handoff_dir" and env in (None, ""):
+            env = os.environ.get("CONTEXT_HANDOFF_DIR")
         raw = env if env not in (None, "") else data.get(f.name)
         if raw is not None:
             try:

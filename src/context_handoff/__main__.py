@@ -5,6 +5,7 @@
     context-handoff precompact   PreCompact hook: prints compaction instructions
     context-handoff report [days]
     context-handoff check <transcript.jsonl>   print what the meter sees
+    context-handoff note-path [cwd]   print the path for a new handoff note
 
 Options (before the command):
     --tool NAME   the agent tool whose session files are read (default: claude)
@@ -15,9 +16,10 @@ Hooks never fail the session: any error ends with no output and exit 0.
 from __future__ import annotations
 
 import json
+import os
 import sys
 
-from . import adapters, config, meter, report
+from . import adapters, config, meter, notes, report
 from .adapters.base import Adapter
 from .handlers import compact as compact_handler
 from .handlers import meter as meter_handler
@@ -61,6 +63,12 @@ def _check(args: list[str], adapter: Adapter) -> int:
     return 0
 
 
+def _note_path(args: list[str]) -> int:
+    """For the /handoff command when the hook gave no path: the code names the note, not the agent."""
+    print(notes.NoteStore.from_config(config.load()).new_path(args[0] if args else os.getcwd()))
+    return 0
+
+
 def _usage() -> int:
     print(__doc__.strip())
     return 2
@@ -82,6 +90,8 @@ def main(argv: list[str] | None = None) -> int:
         return _report(args, adapter)
     if cmd == "check" and args:
         return _check(args, adapter)
+    if cmd == "note-path":
+        return _note_path(args)
     return _usage()
 
 

@@ -96,6 +96,8 @@ class ClaudeCode:
             yield f.parent.name, f
 
     def notice(self, event: str, line: str, context: str = "", **extra) -> dict:
+        if not line:
+            return {"hookSpecificOutput": {"hookEventName": event, **extra, "additionalContext": context}}
         ctx = relay(line) + ("\n\n" + context if context else "")
         return {
             "systemMessage": line,

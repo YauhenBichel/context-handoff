@@ -28,7 +28,10 @@ class HookReplies(Protocol):
     clear_command: str  # what the owner types to start fresh
 
     def notice(self, event: str, line: str, context: str = "", **extra) -> dict:
-        """A reply that shows `line` to the owner and adds `context` for the agent."""
+        """A reply that shows `line` to the owner and adds `context` for the agent.
+
+        With an empty `line` nothing is shown: the reply only adds `context`.
+        """
 
     def block(self, reason: str) -> dict:
         """A reply that stops the prompt and shows `reason`."""

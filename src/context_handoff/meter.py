@@ -25,7 +25,9 @@ from .prices import lookup
 from .usage import Session
 
 # A prompt that asks for the handoff, or overrides the meter, is never blocked.
-BYPASS = re.compile(r"^\s*/?([a-z0-9-]+:)?handoff\b|#override", re.IGNORECASE)
+HANDOFF = r"^\s*/?([a-z0-9-]+:)?handoff\b"
+BYPASS = re.compile(HANDOFF + "|#override", re.IGNORECASE)
+HANDOFF_REQUEST = re.compile(HANDOFF, re.IGNORECASE)
 
 
 @dataclass
@@ -82,3 +84,8 @@ def reasons(r: Reading, cfg: Config) -> tuple[list[str], list[str]]:
 
 def bypassed(prompt: str) -> bool:
     return bool(BYPASS.search(prompt or ""))
+
+
+def asks_for_handoff(prompt: str) -> bool:
+    """True when the owner's prompt asks for a handoff note (`handoff ...` or the /handoff command)."""
+    return bool(HANDOFF_REQUEST.search(prompt or ""))

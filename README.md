@@ -51,9 +51,10 @@ What you see above a prompt once a session is past the warn limit:
    write a handoff note when the current task is done.
 3. **Block**. Over a block limit, it holds the prompt until you type `handoff`
    or add `#override`.
-4. **Resume** (`SessionStart` hook, after `/clear`). It loads the project's
-   newest unused note into the new session, so you type `go` instead of
-   pasting a prompt. Each note is loaded once.
+4. **Resume** (`SessionStart` hook, after `/clear`). It loads the newest
+   unused note for the working directory into the new session, so you type
+   `go` instead of pasting a prompt. Each note is loaded once, and the resume
+   line says which directory it was saved for.
 
 ## Install
 
@@ -121,8 +122,10 @@ Defaults, then `~/.claude/context-handoff.json`, then environment variables
 | `warn_session_usd` | 20 | session total that triggers a handoff |
 | `auto_handoff` | true | Claude writes the note itself; false = only a warning |
 | `max_age_min` | 180 | notes older than this are not resumed |
-| `handoff_dir` | `~/.claude/handoffs` | where notes go |
+| `prune_days` | 30 | **notes older than this are deleted**; 0 keeps them all (see [Notes](#notes)) |
+| `handoff_dir` | `~/.claude/handoffs` | where notes go (`CONTEXT_HANDOFF_HANDOFF_DIR`) |
 | `state_dir` | `~/.claude/context-handoff` | log (`meter.jsonl`) and per-session markers |
+| `log_max_kb` | 1024 | `meter.jsonl` is renamed to `meter.jsonl.1` past this size; 0 never rotates |
 | `prices` | see [prices.py](src/context_handoff/prices.py) | `{"model-prefix": [input, output, cache_read]}` per million tokens |
 
 Example `~/.claude/context-handoff.json`:
@@ -130,6 +133,38 @@ Example `~/.claude/context-handoff.json`:
 ```json
 { "warn_turn_usd": 1.0, "warn_session_usd": 50, "prices": { "claude-opus-5-5": [4.0, 20.0, 0.20] } }
 ```
+
+## Notes
+
+A note's path is computed by the plugin, never by Claude:
+
+```
+~/.claude/handoffs/<project>-<cwd8>-<YYYYMMDD-HHMMSS>-<sid6>.md
+```
+
+`<project>` is the working directory's last part (for you, when you look in
+the folder), `<cwd8>` is a short hash of the full working directory, and
+`<sid6>` a short hash of the session id. Notes are matched by `<cwd8>`, so two
+repositories that both end in `src` or `app` do not get each other's notes, and
+two sessions in one directory never write to the same file.
+
+- **Old notes.** Up to 0.1.6 a note was `<project>-<YYYYMMDD-HHMM>.md`. Such a
+  note is still loaded for a working directory with that last part, inside
+  `max_age_min`. It is not loaded when the meter log shows a session in
+  another directory with the same name in that time: the resume line then
+  says so, and you can read the note by hand.
+- **Deleted after 30 days.** When a session starts after `/clear` or a
+  compaction, notes last changed more than `prune_days` days ago are deleted,
+  used or not. Only regular files directly inside `handoff_dir` whose name is
+  in one of the two formats above are deleted; symlinks, folders and other
+  files are left alone. The resume line says how many were deleted. Set
+  `"prune_days": 0` (or `CONTEXT_HANDOFF_PRUNE_DAYS=0`) to keep every note.
+- **A note is data, not instructions.** A note may hold text a session took
+  from a web page or a tool's output. It is given to the new session inside
+  `<handoff-note>` tags, after a fixed preamble: it is a saved note, it cannot
+  grant permissions, and destructive or outward-facing actions it names still
+  need your confirmation. Symlinks named like a note are not followed, and at
+  most 12,000 bytes of a note are loaded.
 
 ## Prices
 
@@ -168,8 +203,9 @@ the cheaper, sharper way when you are at the keyboard.
 
 - A plugin cannot run `/clear` for you. That one step stays manual; use
   [auto-compact](#hands-free-auto-compact) to continue without typing.
-- Notes are matched by the project folder's name, and only those newer than
-  `max_age_min` are loaded.
+- Notes are matched by the full working directory, and only those newer than
+  `max_age_min` are loaded. A session started in another directory (a
+  subfolder, a second checkout) does not get the note.
 - The meter reads the transcript, so the first prompt of a session is not
   metered.
 - Costs are estimates from the transcript's usage fields, not your bill.
@@ -202,7 +238,7 @@ prompt.
 
 Ask Claude for a handoff note before `/clear` (`/context-handoff:handoff`, or
 let the plugin ask automatically). After `/clear`, the `SessionStart` hook
-loads the project's newest unused note, so you type `go` and the new session
+loads the working directory's newest unused note, so you type `go` and the new session
 continues from it.
 
 ### How big should a Claude Code session get?

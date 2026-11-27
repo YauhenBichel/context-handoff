@@ -39,6 +39,15 @@ What you see above a prompt once a session is past the warn limit:
 (claude-opus-5-5 prices). Claude will write a handoff note after this task; then /clear and type go.
 ```
 
+## When to use it, and when not
+
+Use it when you work in Claude Code for hours in one session, when long sessions cost more than you expect,
+or when you keep pasting a summary into a fresh session by hand.
+
+It is not a billing tool and does not read your invoice: costs are estimates from the transcript at API list
+prices. It does not run `/clear` for you, and it does not change what Claude can see or do in a session. For
+usage reports alone, a tool such as ccusage does that; context-handoff adds the warning and the note.
+
 ## How it works
 
 1. **Meter** (`UserPromptSubmit` hook). Before each prompt it reads the
